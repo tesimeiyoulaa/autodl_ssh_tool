@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 
 def parse_ssh():
@@ -33,6 +33,7 @@ def parse_ssh():
     output_text.delete("1.0", tk.END)
     output_text.insert("1.0", result)
     output_text.config(state="normal")  # 保持可选中/复制
+    status_var.set("已生成配置，可点击“写入确认”保存到 config")
 
 
 def write_config():
@@ -58,33 +59,85 @@ def write_config():
             f.write(config_text)
             f.write("\n")
         messagebox.showinfo("写入成功", f"配置已写入：\n{config_path}")
+        status_var.set(f"写入成功：{config_path}")
     except OSError as e:
         messagebox.showerror("写入失败", f"无法写入配置文件：\n{e}")
+        status_var.set("写入失败，请检查权限或路径")
 
 
 root = tk.Tk()
-root.title("SSH Config 生成工具")
+root.title("SSH Config Builder")
+root.geometry("820x460")
+root.minsize(760, 420)
+root.configure(bg="#eef2f7")
 
-frame = tk.Frame(root, padx=12, pady=12)
-frame.pack(fill="both", expand=True)
+style = ttk.Style()
+style.theme_use("clam")
+# 使用更适合中文显示的字体，提升清晰度
+ui_font = ("Microsoft YaHei UI", 10)
+title_font = ("Microsoft YaHei UI", 16, "bold")
+mono_font = ("Microsoft YaHei UI", 11)
+root.option_add("*Font", ui_font)
 
-tk.Label(frame, text="输入 ssh 命令：").grid(row=0, column=0, sticky="w")
-entry = tk.Entry(frame, width=55)
-entry.grid(row=1, column=0, sticky="we")
+style.configure("Card.TFrame", background="#ffffff")
+style.configure("Title.TLabel", background="#ffffff", foreground="#0f172a", font=title_font)
+style.configure("Hint.TLabel", background="#ffffff", foreground="#64748b", font=ui_font)
+style.configure("Field.TLabel", background="#ffffff", foreground="#334155", font=ui_font)
+style.configure("Primary.TButton", font=("Microsoft YaHei UI", 10, "bold"))
+style.configure("Secondary.TButton", font=ui_font)
+style.configure("Status.TLabel", background="#eef2f7", foreground="#475569", font=ui_font)
+
+root.grid_columnconfigure(0, weight=1)
+root.grid_rowconfigure(0, weight=1)
+
+main_card = ttk.Frame(root, style="Card.TFrame", padding=20)
+main_card.grid(row=0, column=0, sticky="nsew", padx=18, pady=(18, 10))
+main_card.grid_columnconfigure(0, weight=1)
+main_card.grid_rowconfigure(4, weight=1)
+
+ttk.Label(main_card, text="SSH Config 生成工具", style="Title.TLabel").grid(row=0, column=0, sticky="w")
+ttk.Label(main_card, text="输入 SSH 命令，一键生成并安全写入本地 SSH 配置。", style="Hint.TLabel").grid(
+    row=1, column=0, sticky="w", pady=(4, 14)
+)
+
+input_wrap = ttk.Frame(main_card, style="Card.TFrame")
+input_wrap.grid(row=2, column=0, sticky="ew")
+input_wrap.grid_columnconfigure(0, weight=1)
+
+ttk.Label(input_wrap, text="输入 ssh 命令", style="Field.TLabel").grid(row=0, column=0, sticky="w", pady=(0, 6))
+entry = ttk.Entry(input_wrap)
+entry.grid(row=1, column=0, sticky="ew")
 entry.insert(0, "ssh -p 23497 root@connect.westc.gpuhub.com")
 
-btn = tk.Button(frame, text="生成配置", command=parse_ssh)
-btn.grid(row=1, column=1, padx=(8, 0))
+btns = ttk.Frame(input_wrap, style="Card.TFrame")
+btns.grid(row=1, column=1, sticky="e", padx=(10, 0))
 
-write_btn = tk.Button(frame, text="写入确认", command=write_config)
-write_btn.grid(row=1, column=2, padx=(8, 0))
+btn = ttk.Button(btns, text="生成配置", command=parse_ssh, style="Primary.TButton")
+btn.grid(row=0, column=0, padx=(0, 8))
 
-tk.Label(frame, text="输出（可复制）：").grid(row=2, column=0, sticky="w", pady=(10, 0))
+write_btn = ttk.Button(btns, text="写入确认", command=write_config, style="Secondary.TButton")
+write_btn.grid(row=0, column=1)
 
-output_text = tk.Text(frame, width=55, height=5, fg="blue")
-output_text.grid(row=3, column=0, columnspan=3, sticky="we")
+ttk.Label(main_card, text="输出（可复制）", style="Field.TLabel").grid(row=3, column=0, sticky="sw", pady=(12, 6))
+
+output_text = tk.Text(
+    main_card,
+    height=10,
+    wrap="word",
+    relief="flat",
+    borderwidth=0,
+    padx=12,
+    pady=10,
+    bg="#f8fafc",
+    fg="#0f172a",
+    insertbackground="#1e293b",
+    font=mono_font,
+)
+output_text.grid(row=4, column=0, sticky="nsew")
 output_text.insert("1.0", "输出会显示在这里")
 
-frame.columnconfigure(0, weight=1)
+status_var = tk.StringVar(value="就绪：请先输入 SSH 命令并点击“生成配置”")
+status = ttk.Label(root, textvariable=status_var, style="Status.TLabel")
+status.grid(row=1, column=0, sticky="ew", padx=20, pady=(0, 14))
 
 root.mainloop()
